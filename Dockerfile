@@ -1,4 +1,4 @@
-FROM	ubuntu:14.04
+FROM	node:0.12.7-wheezy
 
 ENV GRAFANA_VERSION 1.9.1
 ENV INFLUXDB_VERSION 0.8.8
@@ -14,8 +14,24 @@ RUN		apt-get -y update && apt-get -y upgrade
 # ---------------- #
 
 # Install all prerequisites
-RUN 	apt-get -y install wget nginx-light supervisor curl
+RUN	apt-get -y install wget nginx-light supervisor curl unzip
+#RUN apt-get -y install make gcc g++
 
+# Install node for statsd
+#RUN \
+#  cd /tmp && \
+#  wget http://nodejs.org/dist/node-latest.tar.gz && \
+#  tar xvzf node-latest.tar.gz && \
+#  rm -f node-latest.tar.gz && \
+#  cd node-v* && \
+#  ./configure && \
+#  CXX="g++ -Wno-unused-local-typedefs" make && \
+#  CXX="g++ -Wno-unused-local-typedefs" make install && \
+#  cd /tmp && \
+#  rm -rf /tmp/node-v* && \
+#  npm install -g npm && \
+#  printf '\n# Node.js\nexport PATH="node_modules/.bin:$PATH"' >> /root/.bashrc
+  
 #RUN 	apt-get -y install software-properties-common
 #RUN		add-apt-repository -y ppa:chris-lea/node.js && apt-get -y update
 #RUN		apt-get -y install python-django-tagging python-simplejson python-memcache python-ldap python-cairo \
@@ -30,6 +46,10 @@ RUN		mkdir -p src/grafana && cd src/grafana && \
 RUN		wget http://s3.amazonaws.com/influxdb/influxdb_${INFLUXDB_VERSION}_amd64.deb && \
 			dpkg -i influxdb_${INFLUXDB_VERSION}_amd64.deb && rm influxdb_${INFLUXDB_VERSION}_amd64.deb
  
+# Install statsd
+RUN 	npm install statsd-influxdb-backend
+RUN 	wget https://github.com/etsy/statsd/archive/v0.7.2.zip
+RUN 	unzip v0.7.2.zip
 # ----------------- #
 #   Configuration   #
 # ----------------- #
@@ -38,12 +58,16 @@ RUN		wget http://s3.amazonaws.com/influxdb/influxdb_${INFLUXDB_VERSION}_amd64.de
 ADD		influxdb/config.toml /etc/influxdb/config.toml 
 ADD		influxdb/run.sh /usr/local/bin/run_influxdb
 # These two databases have to be created. These variables are used by set_influxdb.sh and set_grafana.sh
-ENV		PRE_CREATE_DB data grafana
+ENV		PRE_CREATE_DB data grafana graphite statsd elasticsearch fork
 ENV		INFLUXDB_DATA_USER data
 ENV		INFLUXDB_DATA_PW data
 ENV		INFLUXDB_GRAFANA_USER grafana
 ENV		INFLUXDB_GRAFANA_PW grafana
 ENV		ROOT_PW root
+
+# Configure Statsd
+ADD		./statsd/config.js /statsd-0.7.2/config.js
+
 
 # Configure Grafana
 ADD		./grafana/config.js /src/grafana/config.js
@@ -82,6 +106,8 @@ EXPOSE	8086
 # InfluxDB HTTPS API
 EXPOSE	8084
 
+# Statsd
+EXPOSE  8125
 # -------- #
 #   Run!   #
 # -------- #

@@ -32,9 +32,10 @@ read-timeout = "5s"
 
   # Configure the graphite api
   [input_plugins.graphite]
-  enabled = false
-  # port = 2003
-  # database = ""  # store graphite data in this database
+  enabled = true
+  address = "0.0.0.0" # If not set, is actually set to bind-address.
+  port = 2003
+  database = "graphite"  # store graphite data in this database
 
 # Raft configuration
 [raft]
@@ -97,7 +98,7 @@ concurrent-shard-query-limit = 10
 
 # Maximum mmap open files, this will affect the virtual memory used by
 # the process
-max-open-files = 40
+max-open-files = 500
 
 # LRU cache size, LRU is used by leveldb to store contents of the
 # uncompressed sstables. You can use `m` or `g` prefix for megabytes
